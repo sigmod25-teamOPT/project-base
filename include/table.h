@@ -23,6 +23,9 @@ public:
 
     static Table from_columnar(const ColumnarTable& input);
 
+    static std::vector<std::vector<Data>> copy_scan(const ColumnarTable& table, 
+                const std::vector<std::tuple<size_t, DataType>>& output_attrs);
+    
     ColumnarTable to_columnar() const;
 
     const std::vector<std::vector<Data>>& table() const { return data_; }

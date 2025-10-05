@@ -156,17 +156,7 @@ ExecuteResult execute_scan(const Plan&               plan,
     const std::vector<std::tuple<size_t, DataType>>& output_attrs) {
     auto                           table_id = scan.base_table_id;
     auto&                          input    = plan.inputs[table_id];
-    auto                           table    = Table::from_columnar(input);
-    std::vector<std::vector<Data>> results;
-    for (auto& record: table.table()) {
-        std::vector<Data> new_record;
-        new_record.reserve(output_attrs.size());
-        for (auto [col_idx, _]: output_attrs) {
-            new_record.emplace_back(record[col_idx]);
-        }
-        results.emplace_back(std::move(new_record));
-    }
-    return results;
+    return Table::copy_scan(input, output_attrs);
 }
 
 ExecuteResult execute_impl(const Plan& plan, size_t node_idx) {
