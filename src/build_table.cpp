@@ -38,35 +38,35 @@ public:
         } else {
             switch (this->attributes_data_[col_idx].type) {
             case DataType::INT32: {
-                int32_t value;
-                auto    result = std::from_chars(begin, begin + len, value);
-                if (result.ec != std::errc()) {
-                    throw std::runtime_error("parse integer error");
-                }
+            try {
+                int32_t value = std::stoi(std::string(begin, len));
                 this->last_record_.emplace_back(value);
-                break;
+            } catch (const std::exception&) {
+                throw std::runtime_error("parse integer error");
+            }
+            break;
             }
             case DataType::INT64: {
-                int64_t value;
-                auto    result = std::from_chars(begin, begin + len, value);
-                if (result.ec != std::errc()) {
-                    throw std::runtime_error("parse integer error");
-                }
+            try {
+                int64_t value = std::stol(std::string(begin, len));
                 this->last_record_.emplace_back(value);
-                break;
+            } catch (const std::exception&) {
+                throw std::runtime_error("parse integer error");
+            }
+            break;
             }
             case DataType::FP64: {
-                double value;
-                auto   result = std::from_chars(begin, begin + len, value);
-                if (result.ec != std::errc()) {
-                    throw std::runtime_error("parse float error");
-                }
+            try {
+                double value = std::stod(std::string(begin, len));
                 this->last_record_.emplace_back(value);
-                break;
+            } catch (const std::exception&) {
+                throw std::runtime_error("parse float error");
+            }
+            break;
             }
             case DataType::VARCHAR: {
-                this->last_record_.emplace_back(std::string{begin, len});
-                break;
+            this->last_record_.emplace_back(std::string{begin, len});
+            break;
             }
             }
         }
