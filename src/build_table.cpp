@@ -7,6 +7,14 @@
 #include <plan.h>
 #include <table.h>
 
+#if !defined(TEAMOPT_USE_DUCKDB) || defined(TEAMOPT_BUILD_CACHE)
+#include <mmaped_mem.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#endif
+
 template <class Functor>
 class TableParser: public CSVParser {
 public:
@@ -38,35 +46,35 @@ public:
         } else {
             switch (this->attributes_data_[col_idx].type) {
             case DataType::INT32: {
-            try {
-                int32_t value = std::stoi(std::string(begin, len));
+                int32_t value;
+                auto    result = std::from_chars(begin, begin + len, value);
+                if (result.ec != std::errc()) {
+                    throw std::runtime_error("parse integer error");
+                }
                 this->last_record_.emplace_back(value);
-            } catch (const std::exception&) {
-                throw std::runtime_error("parse integer error");
-            }
-            break;
+                break;
             }
             case DataType::INT64: {
-            try {
-                int64_t value = std::stol(std::string(begin, len));
+                int64_t value;
+                auto    result = std::from_chars(begin, begin + len, value);
+                if (result.ec != std::errc()) {
+                    throw std::runtime_error("parse integer error");
+                }
                 this->last_record_.emplace_back(value);
-            } catch (const std::exception&) {
-                throw std::runtime_error("parse integer error");
-            }
-            break;
+                break;
             }
             case DataType::FP64: {
-            try {
-                double value = std::stod(std::string(begin, len));
+                double value;
+                auto   result = std::from_chars(begin, begin + len, value);
+                if (result.ec != std::errc()) {
+                    throw std::runtime_error("parse float error");
+                }
                 this->last_record_.emplace_back(value);
-            } catch (const std::exception&) {
-                throw std::runtime_error("parse float error");
-            }
-            break;
+                break;
             }
             case DataType::VARCHAR: {
-            this->last_record_.emplace_back(std::string{begin, len});
-            break;
+                this->last_record_.emplace_back(std::string{begin, len});
+                break;
             }
             }
         }
@@ -131,6 +139,50 @@ ColumnarTable copy(const ColumnarTable& value) {
     }
     return ret;
 }
+
+#if !defined(TEAMOPT_USE_DUCKDB) || defined(TEAMOPT_BUILD_CACHE)
+
+ColumnarTable Table::from_cache(const std::filesystem::path& path) {
+    // mmap file
+    int fd = open(path.c_str(), O_RDONLY);
+    if (fd == -1) {
+        throw std::runtime_error("Failed to open file: " + path.string());
+    }
+    struct stat sb;
+    if (fstat(fd, &sb) == -1) {
+        close(fd);
+        throw std::runtime_error("Failed to stat file: " + path.string());
+    }
+    if (sb.st_size == 0) {
+        close(fd);
+        throw std::runtime_error("File is empty: " + path.string());
+    }
+    void* file_in_memory = mmap(nullptr, sb.st_size, PROT_READ,
+                                MAP_PRIVATE | MAP_POPULATE, fd, 0);
+    if (file_in_memory == MAP_FAILED) {
+        close(fd);
+        throw std::runtime_error("Failed to mmap file: " + path.string());
+    }
+    close(fd);
+    // Now create a columnar table from file
+    MappedMemory* mapped_memory = new MappedMemory(file_in_memory, sb.st_size);
+    std::vector<Column> columns;
+    TableMeta *meta = reinterpret_cast<TableMeta*>(file_in_memory);
+    std::byte* data = reinterpret_cast<std::byte*>(file_in_memory) + PAGE_SIZE;
+    for (size_t i = 0; i < meta->num_cols; ++i) {
+        columns.emplace_back(meta->types[i]);
+        auto& last_column = columns.back();
+        last_column.assign_mapped_memory(mapped_memory);
+        for (size_t j = 0; j < meta->num_pages[i]; ++j) {
+            Page *page = reinterpret_cast<Page*>(data);
+            last_column.pages.push_back(page);
+            data += PAGE_SIZE;
+        }
+    }
+    return ColumnarTable{meta->num_rows, std::move(columns)};
+}
+
+#endif
 
 ColumnarTable Table::from_csv(const std::vector<Attribute>& attributes,
     const std::filesystem::path&                            path,

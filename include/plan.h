@@ -20,6 +20,7 @@
 
 #include <attribute.h>
 #include <statement.h>
+#include "mmaped_mem.h"
 // #include <table.h>
 
 // supported attribute data types
@@ -60,6 +61,7 @@ struct alignas(8) Page {
 struct Column {
     DataType           type;
     std::vector<Page*> pages;
+    MappedMemory      *mapped_memory;
 
     Page* new_page() {
         auto ret = new Page;
@@ -67,14 +69,21 @@ struct Column {
         return ret;
     }
 
+    void assign_mapped_memory(MappedMemory* mapped_memory) {
+        this->mapped_memory = mapped_memory;
+        this->mapped_memory->refs++;
+    }
+
     Column(DataType data_type)
     : type(data_type)
-    , pages() {}
+    , pages(), mapped_memory(nullptr) {}
 
     Column(Column&& other) noexcept
     : type(other.type)
-    , pages(std::move(other.pages)) {
+    , pages(std::move(other.pages))
+    , mapped_memory(other.mapped_memory) {
         other.pages.clear();
+        other.mapped_memory = nullptr;
     }
 
     Column& operator=(Column&& other) noexcept {
@@ -85,6 +94,8 @@ struct Column {
             type  = other.type;
             pages = std::move(other.pages);
             other.pages.clear();
+            mapped_memory = other.mapped_memory;
+            other.mapped_memory = nullptr;
         }
         return *this;
     }
@@ -93,6 +104,11 @@ struct Column {
     Column& operator=(const Column&) = delete;
 
     ~Column() {
+        if (mapped_memory != nullptr) {
+            if (--mapped_memory->refs == 0)
+                delete mapped_memory;
+            return;
+        }
         for (auto* page: pages) {
             delete page;
         }

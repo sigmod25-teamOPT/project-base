@@ -143,35 +143,32 @@ Now, you can run the tests:
 > ./build/Release/run plans.json
 > ```
 
-# Hardware
+# Cache
 
-The evaluation is automatically executed on four different servers. On multi-socket machines, the benchmarks are bound to a single socket (using `numactl -m 0 -N 0`).
+There are 2 new executables with this repository. They cache the join tables and
+result of each query and mmap them for faster loading times and getting rid of duckdb.
 
- * **AMD #1**
-    * CPU: 2x AMD EPYC 7F72 (SMT 2, 24 cores, 48 threads)
-    * Main memory: 256 GB
- * **ARM #1**
-    * CPU: 1x Ampere Altra Max (SMT 1, 128 cores, 128 threads)
-    * Main memory: 512 GB
- * **IBM #1**
-    * CPU: 8x IBM Power8 (SMT 8, 12 cores, 96 threads)
-    * Main memory: 1024 GB
- * **Intel #1**
-    * CPU: 4x Intel Xeon E7-4880 v2 (SMT 2, 15 cores, 30 threads)
-    * Main memory: 512 GB
+To build the cache you need to run:
+```bash
+./build/build_cache plans.json
+```
 
-Additional Evaluation Server:
- * **AMD #2**
-    * CPU: 1x AMD EPYC 7343 (SMT 2, 16 cores, 32 threads; 20 threads enabled)
-    * Main memory: 96 GB
- * **ARM #2**
-    * CPU: 1x NVIDIA GH200 Grace Hopper (SMT 1, 72 cores, 72 threads)
-    * Main memory: 480 GB
- * **IBM #2**
-    * CPU: 2x IBM Power10 (SMT 8, 12 cores, 96 threads)
-    * Main memory: 512 GB
- * **Intel #2**
-    * CPU: 2x Intel Xeon Platinum 8352Y (SMT 2, 32 cores, 64 threads)
-    * Main memory: 256 GB
+[!TIP] If you are using x86/linux you can download our prebuild cache with:
+```
+wget http://share.uoa.gr/protected/all-download/sigmod25/sigmod25_cache.tar.gz
+```
+
+After the cache is build you can run the queries using:
+```bash
+./build/fast plans.json
+```
+
+Also after you have build the cache you no longer need to build the run executable
+every time (which depends on duckdb and can be slow to compile). Just compile 
+the executable that uses the cache:
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -Wno-dev
+cmake --build build -- -j $(nproc) fast
+```
 
 Code is compiled with Clang 18.
