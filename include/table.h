@@ -181,6 +181,8 @@ class DumpTable {
                         record.emplace_back(duckdb::StringValue::Get(val));
                         break;
                     }
+                    default:
+                        throw std::runtime_error("DataType not supported");
                     }
                 }
             }

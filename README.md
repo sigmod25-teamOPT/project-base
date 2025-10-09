@@ -144,7 +144,7 @@ Now, you can run the tests:
 > ```
 
 # Cache
-
+## This section is only for UNIX users
 There are 2 new executables with this repository. They cache the join tables and
 result of each query and mmap them for faster loading times and getting rid of duckdb.
 
@@ -153,17 +153,22 @@ To build the cache you need to run:
 ./build/build_cache plans.json
 ```
 
-[!TIP] If you are using x86/linux you can download our prebuild cache with:
-```
-wget http://share.uoa.gr/protected/all-download/sigmod25/sigmod25_cache.tar.gz
-```
+> [!TIP] 
+> If you are using x86/linux you can download our prebuilt cache with:
+> ```
+> wget http://share.uoa.gr/protected/all-download/sigmod25/sigmod25_cache_x86.tar.gz
+> ```
+> If you are using arm/macOS you can download our prebuilt cache with:
+> ```
+> wget http://share.uoa.gr/protected/all-download/sigmod25/sigmod25_cache_arm.tar.gz
+> ```
 
 After the cache is build you can run the queries using:
 ```bash
 ./build/fast plans.json
 ```
 
-Also after you have build the cache you no longer need to build the run executable
+Also after you have built the cache you no longer need to build the `run` executable
 every time (which depends on duckdb and can be slow to compile). Just compile 
 the executable that uses the cache:
 ```bash

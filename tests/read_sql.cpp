@@ -1446,6 +1446,7 @@ int main(int argc, char* argv[]) {
                 all_queries_succeeded &= result_is_correct;
             }
         }
+        fmt::println("Total runtime: {} ms", runtime);
 
         if (all_queries_succeeded && write_output_file) {
             auto output_file = std::ofstream(output_filename);

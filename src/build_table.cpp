@@ -46,29 +46,32 @@ public:
         } else {
             switch (this->attributes_data_[col_idx].type) {
             case DataType::INT32: {
-                int32_t value;
-                auto    result = std::from_chars(begin, begin + len, value);
-                if (result.ec != std::errc()) {
-                    throw std::runtime_error("parse integer error");
-                }
-                this->last_record_.emplace_back(value);
-                break;
+            int32_t value;
+            try {
+                value = std::stoi(std::string(begin, len));
+            } catch (const std::exception&) {
+                throw std::runtime_error("parse integer error");
+            }
+            this->last_record_.emplace_back(value);
+            break;
             }
             case DataType::INT64: {
-                int64_t value;
-                auto    result = std::from_chars(begin, begin + len, value);
-                if (result.ec != std::errc()) {
-                    throw std::runtime_error("parse integer error");
-                }
-                this->last_record_.emplace_back(value);
-                break;
+            int64_t value;
+            try {
+                value = std::stoll(std::string(begin, len));
+            } catch (const std::exception&) {
+                throw std::runtime_error("parse integer error");
+            }
+            this->last_record_.emplace_back(value);
+            break;
             }
             case DataType::FP64: {
-                double value;
-                auto   result = std::from_chars(begin, begin + len, value);
-                if (result.ec != std::errc()) {
-                    throw std::runtime_error("parse float error");
-                }
+            double value;
+            try {
+                value = std::stod(std::string(begin, len));
+            } catch (const std::exception&) {
+                throw std::runtime_error("parse float error");
+            }
                 this->last_record_.emplace_back(value);
                 break;
             }
@@ -157,12 +160,30 @@ ColumnarTable Table::from_cache(const std::filesystem::path& path) {
         close(fd);
         throw std::runtime_error("File is empty: " + path.string());
     }
+#ifdef MAP_POPULATE
     void* file_in_memory = mmap(nullptr, sb.st_size, PROT_READ,
                                 MAP_PRIVATE | MAP_POPULATE, fd, 0);
     if (file_in_memory == MAP_FAILED) {
         close(fd);
         throw std::runtime_error("Failed to mmap file: " + path.string());
     }
+#else
+    void* file_in_memory = mmap(nullptr, sb.st_size, PROT_READ,
+                                MAP_PRIVATE, fd, 0);
+    if (file_in_memory == MAP_FAILED) {
+        close(fd);
+        throw std::runtime_error("Failed to mmap file: " + path.string());
+    }
+    // Touch each page to force it into memory
+    long page_size = sysconf(_SC_PAGESIZE);
+    if (page_size <= 0) {
+        page_size = 4096; // fallback to 4096 if sysconf fails
+    }
+    for (size_t offset = 0; offset < static_cast<size_t>(sb.st_size); offset += page_size) {
+        volatile char c = *(reinterpret_cast<char*>(file_in_memory) + offset);
+        (void)c;
+    }
+#endif
     close(fd);
     // Now create a columnar table from file
     MappedMemory* mapped_memory = new MappedMemory(file_in_memory, sb.st_size);
