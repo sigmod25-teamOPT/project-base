@@ -154,16 +154,17 @@ To build the cache you need to run:
 ```
 
 > [!TIP] 
-> If you are using x86/linux you can download our prebuilt cache with:
+> If you are using `Linux x86_64` you can download our prebuilt cache with:
 > ```
 > wget http://share.uoa.gr/protected/all-download/sigmod25/sigmod25_cache_x86.tar.gz
 > ```
-> If you are using arm/macOS you can download our prebuilt cache with:
+> If you are using `macOS arm64` you can download our prebuilt cache with:
 > ```
 > wget http://share.uoa.gr/protected/all-download/sigmod25/sigmod25_cache_arm.tar.gz
 > ```
+> For all other systems you will need to build the cache on your own.
 
-After the cache is build you can run the queries using:
+After the cache is built you can run the queries using:
 ```bash
 ./build/fast plans.json
 ```

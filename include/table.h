@@ -54,9 +54,9 @@ public:
 
     static Table from_columnar(const ColumnarTable& input);
 
-    static std::vector<std::vector<Data>> copy_scan(const ColumnarTable& table, 
+    static std::vector<std::vector<Data>> copy_scan(const ColumnarTable& table,
                 const std::vector<std::tuple<size_t, DataType>>& output_attrs);
-    
+
     ColumnarTable to_columnar() const;
 
     const std::vector<std::vector<Data>>& table() const { return data_; }
@@ -127,7 +127,7 @@ private:
 
 class DumpTable {
     private:
-    TableMeta tablemeta;
+    TableMeta tablemeta = {0};
     ColumnarTable *table;
 
     public:
@@ -188,6 +188,7 @@ class DumpTable {
             }
             data.emplace_back(std::move(record));
         }
+        std::sort(data.begin(), data.end());
         table = new ColumnarTable();
         *table = Table(data, types).to_columnar();
 

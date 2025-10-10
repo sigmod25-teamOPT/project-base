@@ -20,7 +20,52 @@
 
 #include <attribute.h>
 #include <statement.h>
-#include "mmaped_mem.h"
+
+#if !defined(TEAMOPT_USE_DUCKDB) || defined(TEAMOPT_BUILD_CACHE)
+#include <sys/mman.h>
+#endif
+
+class MappedMemory {
+    public:
+    void*  addr;
+    size_t length;
+    size_t refs;
+    MappedMemory(void* addr, size_t length)
+    : addr(addr)
+    , length(length)
+    , refs(0) {}
+
+    MappedMemory(const MappedMemory&) = delete;
+    MappedMemory& operator=(const MappedMemory&) = delete;
+
+    MappedMemory(MappedMemory&& other) noexcept
+    : addr(other.addr)
+    , length(other.length)
+    , refs(other.refs) {
+        other.addr = nullptr;
+        other.length = 0;
+        other.refs = 0;
+    }
+
+    MappedMemory& operator=(MappedMemory&& other) noexcept {
+        if (this != &other) {
+            addr = other.addr;
+            length = other.length;
+            refs = other.refs;
+            other.addr = nullptr;
+            other.length = 0;
+            other.refs = 0;
+        }
+        return *this;
+    }
+
+    ~MappedMemory() {
+#if !defined(TEAMOPT_USE_DUCKDB) || defined(TEAMOPT_BUILD_CACHE)
+        munmap(addr, length);
+#endif
+    }
+};
+
 // #include <table.h>
 
 // supported attribute data types

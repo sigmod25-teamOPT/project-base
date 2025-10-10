@@ -1292,7 +1292,6 @@ bool compare_withcache(const ColumnarTable& expected, const ColumnarTable& resul
 
     auto results_table = Table::from_columnar(results);
     auto expected_table = Table::from_columnar(expected);
-    sort(expected_table.table());
     sort(results_table.table());
 
     std::vector<uint8_t> booleans(num_rows, 0);
