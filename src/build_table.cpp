@@ -14,6 +14,17 @@
 #include <unistd.h>
 #endif
 
+#if defined(__GNUC__) && (__GNUC__ < 12)
+namespace std {
+    template <>
+    struct hash<std::filesystem::path> {
+        size_t operator()(const std::filesystem::path& p) const noexcept {
+            return std::hash<std::string>()(p.string());
+        }
+    };
+}
+#endif
+
 template <class Functor>
 class TableParser: public CSVParser {
 public:
