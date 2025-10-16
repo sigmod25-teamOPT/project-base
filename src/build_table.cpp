@@ -14,17 +14,6 @@
 #include <unistd.h>
 #endif
 
-#if defined(__GNUC__) && (__GNUC__ < 11)
-namespace std {
-    template <>
-    struct hash<std::filesystem::path> {
-        size_t operator()(const std::filesystem::path& p) const noexcept {
-            return std::hash<std::string>()(p.string());
-        }
-    };
-}
-#endif
-
 template <class Functor>
 class TableParser: public CSVParser {
 public:
@@ -109,8 +98,8 @@ TableParser(const std::vector<Attribute>& attributes,
 
 char buffer[1024 * 1024];
 
-std::unordered_map<std::filesystem::path, InnerTable>    table_cache;
-std::unordered_map<std::filesystem::path, ColumnarTable> result_cache;
+std::unordered_map<std::string, InnerTable>    table_cache;
+std::unordered_map<std::string, ColumnarTable> result_cache;
 
 template <class T>
 size_t from_inner_to_column(const InnerColumnBase* inner,
@@ -222,13 +211,13 @@ ColumnarTable Table::from_csv(const std::vector<Attribute>& attributes,
     namespace views = ranges::views;
     InnerTableView                    table;
     std::vector<std::vector<Data>>    ground_truth;
-    decltype(result_cache.find(path)) result_itr;
+    decltype(result_cache.find(path.c_str())) result_itr;
     if (not filter
-        and (result_itr = result_cache.find(path), result_itr != result_cache.end())) {
+        and (result_itr = result_cache.find(path.c_str()), result_itr != result_cache.end())) {
         // fmt::println("    result cache hit");
         return copy(result_itr->second);
     }
-    if (auto itr = table_cache.find(path); itr != table_cache.end()) {
+    if (auto itr = table_cache.find(path.c_str()); itr != table_cache.end()) {
         // fmt::println("    cache hit");
         table = itr->second;
     } else {
@@ -324,7 +313,7 @@ ColumnarTable Table::from_csv(const std::vector<Attribute>& attributes,
         if (err != CSVParser::Ok) {
             throw std::runtime_error("CSV parse error");
         }
-        auto [iter, _] = table_cache.emplace(path, std::move(full_table));
+        auto [iter, _] = table_cache.emplace(path.c_str(), std::move(full_table));
         table          = iter->second;
     }
     ColumnarTable        ret;
@@ -381,7 +370,7 @@ ColumnarTable Table::from_csv(const std::vector<Attribute>& attributes,
     filter_tp.run(task, table.columns.size());
     ret.num_rows = ret_rows.load(std::memory_order_relaxed);
     if (not filter) {
-        result_cache.emplace(path, copy(ret));
+        result_cache.emplace(path.c_str(), copy(ret));
     }
     return ret;
 }
